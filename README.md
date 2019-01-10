@@ -140,6 +140,8 @@ public class MainActivity extends ReactActivity {
 
 ```
 
+[Follow instructions in this GitHub issue](https://github.com/kraffslol/react-native-braintree-xplat/issues/80) to [setup BrowserSwitch](https://developers.braintreepayments.com/guides/client-sdk/setup/android/v2#browser-switch-setup). It's IMPERATIVE that your `application_id` is all lowercase and contains no punctiation aside from periods.
+
 ## Usage
 
 ### Setup
