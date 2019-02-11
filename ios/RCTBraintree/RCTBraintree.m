@@ -144,17 +144,7 @@ RCT_EXPORT_METHOD(getCardNonce: (NSDictionary *)parameters callback: (RCTRespons
                       if ( error == nil ) {
                           args = @[[NSNull null], tokenizedCard.nonce];
                       } else {
-                          NSError *serialisationErr;
-                          NSData *jsonData = [NSJSONSerialization dataWithJSONObject:[error userInfo]
-                                                                             options:NSJSONWritingPrettyPrinted
-                                                                               error:&serialisationErr];
-
-                          if (! jsonData) {
-                              args = @[serialisationErr.description, [NSNull null]];
-                          } else {
-                              NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-                              args = @[jsonString, [NSNull null]];
-                          }
+                           args = @[[error localizedFailureReason], [NSNull null]];
                       }
 
                       callback(args);
@@ -222,7 +212,7 @@ RCT_EXPORT_METHOD(showApplePayViewController:(NSDictionary *)options callback:(R
             NSString *amount = [item[@"amount"] stringValue];
             [paymentSummaryItems addObject:[PKPaymentSummaryItem summaryItemWithLabel:label amount:[NSDecimalNumber decimalNumberWithString:amount]]];
         }
-        
+
         paymentRequest.requiredBillingAddressFields = PKAddressFieldNone;
         paymentRequest.shippingMethods = nil;
         paymentRequest.requiredShippingAddressFields = PKAddressFieldNone;
