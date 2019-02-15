@@ -136,20 +136,36 @@ RCT_EXPORT_METHOD(getCardNonce: (NSDictionary *)parameters callback: (RCTRespons
     BTCardClient *cardClient = [[BTCardClient alloc] initWithAPIClient: self.braintreeClient];
     BTCard *card = [[BTCard alloc] initWithParameters:parameters];
     card.shouldValidate = YES;
-
+    
     [cardClient tokenizeCard:card
                   completion:^(BTCardNonce *tokenizedCard, NSError *error) {
                       NSArray *args = @[];
-
+                      
                       if ( error == nil ) {
                           args = @[[NSNull null], tokenizedCard.nonce];
                       } else {
-                           args = @[[error localizedFailureReason], [NSNull null]];
+                          NSMutableDictionary *userInfo = [error.userInfo mutableCopy];
+                          
+                          [userInfo removeObjectForKey:@"com.braintreepayments.BTHTTPJSONResponseBodyKey"];
+                          [userInfo removeObjectForKey:@"com.braintreepayments.BTHTTPURLResponseKey"];
+                          
+                          NSError *serialisationErr;
+                          NSData *jsonData = [NSJSONSerialization dataWithJSONObject:userInfo
+                                                                             options:NSJSONWritingPrettyPrinted
+                                                                               error:&serialisationErr];
+                          
+                          if (! jsonData) {
+                              args = @[serialisationErr.description, [NSNull null]];
+                          } else {
+                              NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+                              args = @[jsonString, [NSNull null]];
+                          }
                       }
-
+                      
                       callback(args);
                   }];
 }
+
 
 RCT_EXPORT_METHOD(getDeviceData:(NSDictionary *)options callback:(RCTResponseSenderBlock)callback)
 {
