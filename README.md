@@ -235,13 +235,27 @@ const card = {
   cvv: "400",
 };
 
-BTClient.getCardNonce(card)
-  .then(function(nonce) {
-    //payment succeeded, pass nonce to server
-  })
-  .catch(function(err) {
-    //error handling
-  });
+async function jsGetCardNonce(creditCard: Card = card): string {
+  try {
+    const nonce = await BTClient.getCardNonce(card);
+
+    return nonce;
+  } catch (error) {
+    console.log("Error getting card nonce:", error);
+    /*
+        Note: in iOS, the error handling has been simplified to return one error:
+
+            reject(@"Error getting nonce", @"Cannot process this credit card type.", error);
+
+        See the `getCardNonce` method in RCTBraintree.m for more details + to account for more specific error handling based on what the Braintree SDK returns.
+
+        Reasoning: https://github.com/kraffslol/react-native-braintree-xplat/issues/91
+
+    */
+
+    throw error;
+  }
+}
 
 // Full list of card parameters:
 type Card = {

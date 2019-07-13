@@ -1,11 +1,11 @@
 // @flow
 
-'use strict';
+"use strict";
 
-import { NativeModules, processColor } from 'react-native';
-import { mapParameters } from './utils';
+import { NativeModules, processColor } from "react-native";
+import { mapParameters } from "./utils";
 
-import type { CardParameters } from './types';
+import type { CardParameters } from "./types";
 
 const RCTBraintree = NativeModules.Braintree;
 
@@ -13,7 +13,7 @@ var Braintree = {
   setupWithURLScheme(token, urlscheme) {
     return new Promise(function(resolve, reject) {
       RCTBraintree.setupWithURLScheme(token, urlscheme, function(success) {
-        success == true ? resolve(true) : reject('Invalid Token');
+        success == true ? resolve(true) : reject("Invalid Token");
       });
     });
   },
@@ -21,7 +21,7 @@ var Braintree = {
   setup(token) {
     return new Promise(function(resolve, reject) {
       RCTBraintree.setup(token, function(success) {
-        success == true ? resolve(true) : reject('Invalid Token');
+        success == true ? resolve(true) : reject("Invalid Token");
       });
     });
   },
@@ -53,30 +53,15 @@ var Braintree = {
     });
   },
 
-  getCardNonce(parameters: CardParameters = {}) {
-    return new Promise(function(resolve, reject) {
-      RCTBraintree.getCardNonce(mapParameters(parameters), function(
-        err,
-        nonce
-      ) {
-        let jsonErr = null;
+  async getCardNonce(parameters: CardParameters = {}) {
+    try {
+      const nonce = await RCTBraintree.getCardNonce(mapParameters(parameters));
 
-        try {
-          jsonErr = JSON.parse(err);
-        } catch (e) {
-          //
-        }
-
-        nonce !== null
-          ? resolve(nonce)
-          : reject(
-              jsonErr
-                ? jsonErr['BTCustomerInputBraintreeValidationErrorsKey'] ||
-                  jsonErr
-                : err
-            );
-      });
-    });
+      return nonce;
+    } catch (error) {
+      console.log(`getCardNonce err:`, error);
+      throw err;
+    }
   },
 
   getDeviceData(options = {}) {

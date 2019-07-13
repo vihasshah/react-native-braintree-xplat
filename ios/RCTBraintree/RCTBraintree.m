@@ -65,44 +65,44 @@ RCT_EXPORT_METHOD(showPaymentViewController:(NSDictionary *)options callback:(RC
         if (self.threeDSecureOptions) {
             self.threeDSecure = [[BTThreeDSecureDriver alloc] initWithAPIClient:self.braintreeClient delegate:self];
         }
-
+        
         BTDropInViewController *dropInViewController = [[BTDropInViewController alloc] initWithAPIClient:self.braintreeClient];
         dropInViewController.delegate = self;
-
+        
         NSLog(@"%@", options);
-
+        
         UIColor *tintColor = options[@"tintColor"];
         UIColor *bgColor = options[@"bgColor"];
         UIColor *barBgColor = options[@"barBgColor"];
         UIColor *barTintColor = options[@"barTintColor"];
-
+        
         NSString *title = options[@"title"];
         NSString *description = options[@"description"];
         NSString *amount = options[@"amount"];
-
+        
         if (tintColor) dropInViewController.view.tintColor = [RCTConvert UIColor:tintColor];
         if (bgColor) dropInViewController.view.backgroundColor = [RCTConvert UIColor:bgColor];
-
+        
         dropInViewController.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(userDidCancelPayment)];
-
+        
         self.callback = callback;
-
+        
         UINavigationController *navigationController = [[UINavigationController alloc] initWithRootViewController:dropInViewController];
-
+        
         if (barBgColor) navigationController.navigationBar.barTintColor = [RCTConvert UIColor:barBgColor];
         if (barTintColor) navigationController.navigationBar.tintColor = [RCTConvert UIColor:barTintColor];
-
+        
         if (options[@"callToActionText"]) {
             BTPaymentRequest *paymentRequest = [[BTPaymentRequest alloc] init];
             paymentRequest.callToActionText = options[@"callToActionText"];
-
+            
             dropInViewController.paymentRequest = paymentRequest;
         }
-
+        
         if (title) [dropInViewController.paymentRequest setSummaryTitle:title];
         if (description) [dropInViewController.paymentRequest setSummaryDescription:description];
         if (amount) [dropInViewController.paymentRequest setDisplayAmount:amount];
-
+        
         [self.reactRoot presentViewController:navigationController animated:YES completion:nil];
     });
 }
@@ -110,28 +110,31 @@ RCT_EXPORT_METHOD(showPaymentViewController:(NSDictionary *)options callback:(RC
 RCT_EXPORT_METHOD(showPayPalViewController:(RCTResponseSenderBlock)callback)
 {
     dispatch_async(dispatch_get_main_queue(), ^{
-
+        
         BTPayPalDriver *payPalDriver = [[BTPayPalDriver alloc] initWithAPIClient:self.braintreeClient];
         payPalDriver.viewControllerPresentingDelegate = self;
-
+        
         [payPalDriver authorizeAccountWithCompletion:^(BTPayPalAccountNonce *tokenizedPayPalAccount, NSError *error) {
             NSMutableArray *args = @[[NSNull null]];
             if ( error == nil && tokenizedPayPalAccount != nil ) {
                 args = [@[[NSNull null], tokenizedPayPalAccount.nonce, tokenizedPayPalAccount.email, tokenizedPayPalAccount.firstName, tokenizedPayPalAccount.lastName] mutableCopy];
-
+                
                 if (tokenizedPayPalAccount.phone != nil) {
                     [args addObject:tokenizedPayPalAccount.phone];
                 }
             } else if ( error != nil ) {
                 args = @[error.description, [NSNull null]];
             }
-
+            
             callback(args);
         }];
     });
 }
 
-RCT_EXPORT_METHOD(getCardNonce: (NSDictionary *)parameters callback: (RCTResponseSenderBlock)callback)
+RCT_REMAP_METHOD(getCardNonce,
+                 parameters:(NSDictionary *)parameters
+                 resolve:(RCTPromiseResolveBlock)resolve
+                 reject:(RCTPromiseRejectBlock)reject)
 {
     BTCardClient *cardClient = [[BTCardClient alloc] initWithAPIClient: self.braintreeClient];
     BTCard *card = [[BTCard alloc] initWithParameters:parameters];
@@ -139,30 +142,12 @@ RCT_EXPORT_METHOD(getCardNonce: (NSDictionary *)parameters callback: (RCTRespons
     
     [cardClient tokenizeCard:card
                   completion:^(BTCardNonce *tokenizedCard, NSError *error) {
-                      NSArray *args = @[];
                       
                       if ( error == nil ) {
-                          args = @[[NSNull null], tokenizedCard.nonce];
+                          resolve(tokenizedCard.nonce);
                       } else {
-                          NSMutableDictionary *userInfo = [error.userInfo mutableCopy];
-                          
-                          [userInfo removeObjectForKey:@"com.braintreepayments.BTHTTPJSONResponseBodyKey"];
-                          [userInfo removeObjectForKey:@"com.braintreepayments.BTHTTPURLResponseKey"];
-                          
-                          NSError *serialisationErr;
-                          NSData *jsonData = [NSJSONSerialization dataWithJSONObject:userInfo
-                                                                             options:NSJSONWritingPrettyPrinted
-                                                                               error:&serialisationErr];
-                          
-                          if (! jsonData) {
-                              args = @[serialisationErr.description, [NSNull null]];
-                          } else {
-                              NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-                              args = @[jsonString, [NSNull null]];
-                          }
+                          reject(@"Error getting nonce", @"Cannot process this credit card type.", error);
                       }
-                      
-                      callback(args);
                   }];
 }
 
@@ -170,14 +155,14 @@ RCT_EXPORT_METHOD(getCardNonce: (NSDictionary *)parameters callback: (RCTRespons
 RCT_EXPORT_METHOD(getDeviceData:(NSDictionary *)options callback:(RCTResponseSenderBlock)callback)
 {
     dispatch_async(dispatch_get_main_queue(), ^{
-
+        
         NSLog(@"%@", options);
-
+        
         NSError *error = nil;
         NSString *deviceData = nil;
         NSString *environment = options[@"environment"];
         NSString *dataSelector = options[@"dataCollector"];
-
+        
         //Initialize the data collector and specify environment
         if([environment isEqualToString: @"development"]){
             self.dataCollector = [[BTDataCollector alloc]
@@ -189,7 +174,7 @@ RCT_EXPORT_METHOD(getDeviceData:(NSDictionary *)options callback:(RCTResponseSen
             self.dataCollector = [[BTDataCollector alloc]
                                   initWithEnvironment:BTDataCollectorEnvironmentSandbox];
         }
-
+        
         //Data collection methods
         if ([dataSelector isEqualToString: @"card"]){
             deviceData = [self.dataCollector collectCardFraudData];
@@ -203,14 +188,14 @@ RCT_EXPORT_METHOD(getDeviceData:(NSDictionary *)options callback:(RCTResponseSen
             error = [NSError errorWithDomain:@"RCTBraintree" code:255 userInfo:details];
             NSLog (@"Invalid data collector. Use one of: card, paypal or both");
         }
-
+        
         NSArray *args = @[];
         if ( error == nil ) {
             args = @[[NSNull null], deviceData];
         } else {
             args = @[error.description, [NSNull null]];
         }
-
+        
         callback(args);
     });
 }
@@ -228,12 +213,12 @@ RCT_EXPORT_METHOD(showApplePayViewController:(NSDictionary *)options callback:(R
             NSString *amount = [item[@"amount"] stringValue];
             [paymentSummaryItems addObject:[PKPaymentSummaryItem summaryItemWithLabel:label amount:[NSDecimalNumber decimalNumberWithString:amount]]];
         }
-
+        
         paymentRequest.requiredBillingAddressFields = PKAddressFieldNone;
         paymentRequest.shippingMethods = nil;
         paymentRequest.requiredShippingAddressFields = PKAddressFieldNone;
         paymentRequest.paymentSummaryItems = paymentSummaryItems;
-
+        
         paymentRequest.merchantIdentifier = options[@"merchantIdentifier"];;
         paymentRequest.supportedNetworks = @[PKPaymentNetworkVisa, PKPaymentNetworkMasterCard, PKPaymentNetworkAmex, PKPaymentNetworkDiscover];
         paymentRequest.merchantCapabilities = PKMerchantCapability3DS;
@@ -242,16 +227,16 @@ RCT_EXPORT_METHOD(showApplePayViewController:(NSDictionary *)options callback:(R
         if ([paymentRequest respondsToSelector:@selector(setShippingType:)]) {
             paymentRequest.shippingType = PKShippingTypeDelivery;
         }
-
+        
         PKPaymentAuthorizationViewController *viewController = [[PKPaymentAuthorizationViewController alloc] initWithPaymentRequest:paymentRequest];
         viewController.delegate = self;
-
+        
         [self.reactRoot presentViewController:viewController animated:YES completion:nil];
     });
 }
 
 - (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication annotation:(id)annotation {
-
+    
     if ([url.scheme localizedCaseInsensitiveCompare:URLScheme] == NSOrderedSame) {
         return [BTAppSwitch handleOpenURL:url sourceApplication:sourceApplication];
     }
@@ -313,7 +298,7 @@ RCT_EXPORT_METHOD(showApplePayViewController:(NSDictionary *)options callback:(R
             self.callback(@[[NSNull null], paymentMethodNonce.nonce]);
         }
     }
-
+    
     if (!self.threeDSecure) {
         [self.reactRoot dismissViewControllerAnimated:YES completion:nil];
     }
@@ -327,13 +312,13 @@ RCT_EXPORT_METHOD(showApplePayViewController:(NSDictionary *)options callback:(R
 - (UIViewController*)reactRoot {
     UIViewController *root  = [UIApplication sharedApplication].keyWindow.rootViewController;
     UIViewController *maybeModal = root.presentedViewController;
-
+    
     UIViewController *modalRoot = root;
-
+    
     if (maybeModal != nil) {
         modalRoot = maybeModal;
     }
-
+    
     return modalRoot;
 }
 
