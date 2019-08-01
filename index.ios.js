@@ -59,8 +59,7 @@ var Braintree = {
 
       return nonce;
     } catch (error) {
-      console.log(`getCardNonce err:`, error);
-      throw err;
+      throw error;
     }
   },
 
