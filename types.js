@@ -22,22 +22,22 @@ export type CardParameters = {
 export type IOSCardParameters = {
   number: string,
   cvv: string,
-  expirationDate: string,
+  expirationDate: string, // new BTCard has no expirationDate so use month and year
+  expirationMonth: string,
+  expirationYear: string,
   cardholderName: string,
-  billingAddress: {
-    postalCode: string,
-    streetAddress: string,
-    extendedAddress: string,
-    locality: string,
-    region: string,
-    countryName: string,
-    countryCodeAlpha2: string,
-    countryCodeAlpha3: string,
-    countryCodeNumeric: string,
-    firstName: string,
-    lastName: string,
-    company: string,
-  },
+  postalCode: string,
+  streetAddress: string,
+  extendedAddress: string,
+  locality: string,
+  region: string,
+  countryName: string,
+  countryCodeAlpha2: string,
+  countryCodeAlpha3: string,
+  countryCodeNumeric: string,
+  firstName: string,
+  lastName: string,
+  company: string,
 };
 
 export type AndroidCardParameters = CardParameters;
